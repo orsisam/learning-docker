@@ -1613,5 +1613,139 @@ hirarki urutan yang benar.
    memiliki logika reconnect/koneksi ulang ke database jika sewaktu-waktu
    database restart di tengah jalan.
 
+##### Pengujian Praktis Atribut `depends_on` Dengan Status Healthy
+
+Mari kita lakukan pengujian sederhana untuk membuktikan bagaimana `depends_on`
+dengan `condition: service_healthy` menunda eksekusi aplikasi sampai database
+benar-benar siap menerima koneksi.
+
+**Skenario Pengujian**
+
+Kita akan membuat dua service:
+
+1. `db` (PostgreSQL): Butuh waktu beberapa detik untuk inisialisasi awal.
+2. `web` (Nginx): Menunggu `db` hingga berstatus healthy, lalu mengeksekusi
+   `pg_isready` ke `db`.
+
+
+**Langkah-langkah**
+
+1. **Buat Berkas `docker-compose.yaml`
+    Buat folder baru untuk pengujian ini, lalu simpan kode berikut ke dalam file
+    `docker-compose.yaml`:
+
+    ```yaml
+    name: test-depends-on
+
+    services:
+        web:
+            image: nginx:alpine
+            container_name: web_app
+            # Mencoba koneksi ke DB saat menyala
+            command: >
+                sh -c "apk add --no-cache postgresql-client &&
+                       echo '=== CHECKING DATABASE CONNECTION ===' &&
+                       pg_isready -h db -U postgres &&
+                       echo '=== DATABASE SIAP, NYALAKAN NGINX ===' &&
+                       nginx -g 'daemon off;'"
+            depends_on:
+                db:
+                    condition: service_healthy
+
+        db:
+            image: postgres:alpine
+            container_name: db_postgres
+            environment:
+                POSTGRES_PASSWORD: secretpassword
+            healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U postgres"]
+                interval: 3s
+                timeout: 3s
+                retries: 5
+                start_period: 5s
+    ```
+
+2. **Jalankan Pengujian dengan Mengamati Log secara Real-Time**
+    Buka terminal dan jalankan perintah berikut (tanpa `-d` agar kita bisa
+    melihat urutan lognya secara langsung):
+
+    ```bash
+    docker compose up
+
+    ```
+
+3. **Amati Perilaku Output Log Terminal**
+    Kita coba perhatikan urutan kronologis yang muncul di terminal:
+
+1. Inisialisasi `db_postgres`:
+    Docker compose membuat container `db_postgres` terlebih dahulu. Container
+    `web_app` belum dibuat/dinyalakan sama sekali.
+
+2. **Proses Healthcheck Berjalan**:
+    Status `db_postgres` di awal adalah `health: starting`.
+
+    ```text
+    db_postgres  | 2026-10-01 15:33:12.722 UTC [1] LOG:  database system is ready to accept connections
+    ```
+
+3. **Pemberitahuan Status Healthy & Pemicuan `web_app`:
+    Setelah `pg_isready` sukses, status `db_postgres` berubah menjadi `healthy`.
+    Baru setelah itu Docker Compose membuat dan menjalankan `web_app`.
+
+    ```text
+    db_postgres  | 2026-10-01 15:33:12.722 UTC [1] LOG:  database system is ready to accept connections
+    web_app      | (1/5) Installing postgresql-common (1.3-r0)
+    web_app      |   Executing postgresql-common-1.3-r0.pre-install
+    web_app      | (2/5) Installing lz4-libs (1.10.0-r1)
+    web_app      | (3/5) Installing libpq (18.6-r0)
+    web_app      | (4/5) Installing readline (8.3.3-r1)
+    web_app      | (5/5) Installing postgresql18-client (18.6-r0)
+    web_app      | Executing busybox-1.37.0-r31.trigger
+    web_app      | Executing postgresql-common-1.3-r0.trigger
+    web_app      | * Setting postgresql18 as the default version
+    web_app      | OK: 63.7 MiB in 76 packages
+    web_app      | === CHECKING DATABASE CONNECTION ===
+    web_app      | db:5432 - accepting connections
+    web_app      | === DATABASE SIAP, NYALAKAN NGINX ===
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: using the "epoll" event method
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: nginx/1.31.6
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0)
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: OS: Linux 7.0.0-34-generic
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
+    web_app      | 2026/10/01 15:33:19 [notice] 1#1: start worker processes
+    ```
+
+Jika ingin pengujian pembanding, kita tinggal hapus `contidion` dari
+`depends_on`. Kemudian amati apa yang terjadi jika tanpa condition.
+
+Sebenarnya kita juga bisa melakukan tanpa menggunakan command tambahan, jadi
+kita hanya perlu mengeset `condition: service_healthy` pada depends_on.
+
+```yaml
+name: test-depends-on-correct
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: web_nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy # Docker Compose yang menjamin Nginx baru menyala saat DB SIAP!
+
+  db:
+    image: postgres:alpine
+    container_name: db_postgres
+    environment:
+      POSTGRES_PASSWORD: secretpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
+```
 
 
