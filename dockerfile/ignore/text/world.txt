@@ -1,0 +1,1 @@
+Hello World from Docker, We learn Dockerignore now

@@ -1,0 +1,21 @@
+[Unit]
+Description=Specialized Slize for Backend Application Groups
+Documentation=man:systemd.slice(5)
+Before=slices.target
+
+[Slice]
+# Pembatasan Memori
+MemoryHigh=2G
+MemoryMax=3G
+MemorySwapMax=500M
+
+# Pembatasan CPU
+CPUWeight=200
+CPUQuota=150%
+AllowedCPUs=0,1
+
+# Pembatasan I/O Disk
+#IOWriteBandwidthMax=/dev/sda 50M
+
+# Pembatasan Jumlah proses
+TasksMax=500

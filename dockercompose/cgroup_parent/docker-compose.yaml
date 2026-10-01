@@ -1,0 +1,8 @@
+services:
+    web:
+        image: nginx:latest
+        cgroup_parent: backend_apps.slice
+
+    db:
+        image: mongo:latest
+        cgroup_parent: backend_apps.slice

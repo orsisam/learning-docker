@@ -1,0 +1,5 @@
+services:
+    nginx-example:
+        container_name: mongo_db_docker
+        image: mongo:latest
+        cgroup_parent: db_group.slice

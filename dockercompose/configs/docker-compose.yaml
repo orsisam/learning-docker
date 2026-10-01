@@ -1,0 +1,29 @@
+name: test-config-demo
+
+services:
+    web:
+        image: nginx:alpine
+        ports:
+            - "8088:8080"
+        user: "1000:1000"
+        # Memberikan akses tulis di memori RAM untuk folder cache & PID Nginx
+        tmpfs:
+            - /var/cache/nginx:uid=1000,gid=1000
+            - /var/run:uid=1000,gid=1000
+        configs:
+            - source: inline_nginx_conf
+              target: /etc/nginx/conf.d/default.conf
+              uid: "1000"
+              gid: "1000"
+              mode: 0444
+
+configs:
+    inline_nginx_conf:
+        content: |
+            server {
+              listen 8080;
+              location / {
+                return 200 "Atribut 'configs' Docker Compose Berhasil Diuji!\n";
+                add_header Content-Type text/plain;
+              }
+            }

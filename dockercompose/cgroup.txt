@@ -1,0 +1,327 @@
+CGroup /:
+-.slice
+├─user.slice
+│ └─user-1000.slice
+│   ├─[0muser@1000.service …
+│   │ ├─session.slice
+│   │ │ ├─gvfs-goa-volume-monitor.service
+│   │ │ │ └─7844 /usr/libexec/gvfs-goa-volume-monitor
+│   │ │ ├─org.gnome.SettingsDaemon.MediaKeys.service
+│   │ │ │ └─7483 /usr/libexec/gsd-media-keys
+│   │ │ ├─org.gnome.SettingsDaemon.Smartcard.service
+│   │ │ │ └─7510 /usr/libexec/gsd-smartcard
+│   │ │ ├─xdg-permission-store.service
+│   │ │ │ └─4646 /usr/libexec/xdg-permission-store
+│   │ │ ├─org.gnome.SettingsDaemon.Datetime.service
+│   │ │ │ └─7472 /usr/libexec/gsd-datetime
+│   │ │ ├─filter-chain.service
+│   │ │ │ └─4555 /usr/bin/pipewire -c filter-chain.conf
+│   │ │ ├─xdg-document-portal.service
+│   │ │ │ ├─4632 /usr/libexec/xdg-document-portal
+│   │ │ │ └─4664 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subt…
+│   │ │ ├─org.gnome.SettingsDaemon.Housekeeping.service
+│   │ │ │ └─7474 /usr/libexec/gsd-housekeeping
+│   │ │ ├─org.gnome.Shell@x11.service
+│   │ │ │ ├─  7375 /usr/bin/gnome-shell
+│   │ │ │ ├─  7392 /usr/libexec/mutter-x11-frames
+│   │ │ │ └─342848 gjs /usr/share/gnome-shell/extensions/ding@rastersoft.com/ap…
+│   │ │ ├─xdg-desktop-portal.service
+│   │ │ │ └─8002 /usr/libexec/xdg-desktop-portal
+│   │ │ ├─org.freedesktop.IBus.session.GNOME.service
+│   │ │ │ ├─7466 /usr/bin/ibus-daemon --panel disable --xim
+│   │ │ │ ├─7611 /usr/libexec/ibus-dconf
+│   │ │ │ ├─7617 /usr/libexec/ibus-extension-gtk3
+│   │ │ │ ├─7620 /usr/libexec/ibus-x11 --kill-daemon
+│   │ │ │ └─7924 /usr/libexec/ibus-engine-simple
+│   │ │ ├─pipewire-pulse.service
+│   │ │ │ └─4563 /usr/bin/pipewire-pulse
+│   │ │ ├─org.gnome.SettingsDaemon.Keyboard.service
+│   │ │ │ └─7476 /usr/libexec/gsd-keyboard
+│   │ │ ├─org.gnome.SettingsDaemon.A11ySettings.service
+│   │ │ │ └─7467 /usr/libexec/gsd-a11y-settings
+│   │ │ ├─wireplumber.service
+│   │ │ │ └─4558 /usr/bin/wireplumber
+│   │ │ ├─org.gnome.SettingsDaemon.Wacom.service
+│   │ │ │ └─7512 /usr/libexec/gsd-wacom
+│   │ │ ├─gvfs-daemon.service
+│   │ │ │ ├─7311 /usr/libexec/gvfsd
+│   │ │ │ ├─7328 /usr/libexec/gvfsd-fuse /run/user/1000/gvfs -f
+│   │ │ │ └─7982 /usr/libexec/gvfsd-trash --spawner :1.26 /org/gtk/gvfs/exec_sp…
+│   │ │ ├─gvfs-udisks2-volume-monitor.service
+│   │ │ │ └─7542 /usr/libexec/gvfs-udisks2-volume-monitor
+│   │ │ ├─org.gnome.SettingsDaemon.Sharing.service
+│   │ │ │ └─7506 /usr/libexec/gsd-sharing
+│   │ │ ├─org.gnome.SettingsDaemon.Color.service
+│   │ │ │ └─7470 /usr/libexec/gsd-color
+│   │ │ ├─org.gnome.SettingsDaemon.ScreensaverProxy.service
+│   │ │ │ └─7502 /usr/libexec/gsd-screensaver-proxy
+│   │ │ ├─org.gnome.SettingsDaemon.PrintNotifications.service
+│   │ │ │ ├─7495 /usr/libexec/gsd-print-notifications
+│   │ │ │ └─7613 /usr/libexec/gsd-printer
+│   │ │ ├─org.gnome.SettingsDaemon.Power.service
+│   │ │ │ └─7492 /usr/libexec/gsd-power
+│   │ │ ├─org.gnome.SettingsDaemon.XSettings.service
+│   │ │ │ └─7518 /usr/libexec/gsd-xsettings
+│   │ │ ├─gvfs-gphoto2-volume-monitor.service
+│   │ │ │ └─7824 /usr/libexec/gvfs-gphoto2-volume-monitor
+│   │ │ ├─at-spi-dbus-bus.service
+│   │ │ │ ├─7252 /usr/libexec/at-spi-bus-launcher
+│   │ │ │ ├─7259 /usr/bin/dbus-daemon --config-file=/usr/share/defaults/at-spi2…
+│   │ │ │ └─7395 /usr/libexec/at-spi2-registryd --use-gnome-session
+│   │ │ ├─gvfs-metadata.service
+│   │ │ │ └─7693 /usr/libexec/gvfsd-metadata
+│   │ │ ├─org.gnome.SettingsDaemon.Sound.service
+│   │ │ │ └─7511 /usr/libexec/gsd-sound
+│   │ │ ├─pipewire.service
+│   │ │ │ └─4552 /usr/bin/pipewire
+│   │ │ ├─dbus.service
+│   │ │ │ ├─4585 /usr/bin/dbus-daemon --session --address=systemd: --nofork --n…
+│   │ │ │ ├─7422 /usr/libexec/gnome-shell-calendar-server
+│   │ │ │ ├─7440 /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.Shell.Notific…
+│   │ │ │ ├─7621 /usr/libexec/goa-daemon
+│   │ │ │ ├─7624 /usr/libexec/ibus-portal
+│   │ │ │ ├─7678 /usr/libexec/goa-identity-service
+│   │ │ │ ├─7858 /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.ScreenSaver
+│   │ │ │ └─7939 gjs -m /home/orsisam/.local/share/gnome-shell/extensions/gscon…
+│   │ │ ├─org.gnome.SettingsDaemon.Rfkill.service
+│   │ │ │ └─7499 /usr/libexec/gsd-rfkill
+│   │ │ ├─gvfs-mtp-volume-monitor.service
+│   │ │ │ └─7839 /usr/libexec/gvfs-mtp-volume-monitor
+│   │ │ └─gvfs-afc-volume-monitor.service
+│   │ │   └─7833 /usr/libexec/gvfs-afc-volume-monitor
+│   │ ├─background.slice
+│   │ │ └─tracker-miner-fs-3.service
+│   │ │   ├─  7932 /usr/libexec/tracker-miner-fs-3
+│   │ │   └─392666 [tracker-extract]
+│   │ ├─user.slice
+│   │ │ ├─podman-pause-7eecbcb1.scope
+│   │ │ │ └─12192 catatonit -P
+│   │ │ └─rootless-netns-1ff3d56b.scope
+│   │ │   └─12282 /usr/bin/slirp4netns --disable-host-loopback --mtu=65520 --en…
+│   │ ├─app.slice
+│   │ │ ├─snap.ghostty.ghostty-8805fff3-dbe2-4794-9d97-2de4e986fb7b.scope
+│   │ │ │ └─11461 /snap/ghostty/958/bin/ghostty --gtk-single-instance=true
+│   │ │ ├─lerd-php85-fpm.service
+│   │ │ │ ├─libpod-payload-ba49079d5adb7fe00795b1d3dcabb8e948add0fa8e49a3b601dbeafe230faaea
+│   │ │ │ │ ├─12346 php-fpm: master process (/usr/local/etc/php-fpm.conf)
+│   │ │ │ │ ├─12349 php-fpm: pool www
+│   │ │ │ │ └─12350 php-fpm: pool www
+│   │ │ │ └─runtime
+│   │ │ │   └─12344 /usr/bin/conmon --api-version 1 -c ba49079d5adb7fe00795b1d3…
+│   │ │ ├─snap.nvim.nvim-6af2c97f-7d94-4a76-916f-214c58e1cb43.scope
+│   │ │ │ ├─ 50757 /snap/nvim/4866/usr/bin/nvim .
+│   │ │ │ ├─ 51038 /snap/nvim/4866/usr/bin/nvim --embed .
+│   │ │ │ ├─ 51519 marksman server
+│   │ │ │ └─373497 /usr/bin/xsel --nodetach -i -b
+│   │ │ ├─app-ghostty-surface-transient-11571.scope
+│   │ │ │ ├─11571 /bin/sh -c /usr/bin/zsh
+│   │ │ │ ├─11574 /usr/bin/zsh
+│   │ │ │ └─13376 /home/orsisam/.atuin/bin/atuin daemon start --daemonize
+│   │ │ ├─evolution-calendar-factory.service
+│   │ │ │ └─7718 /usr/libexec/evolution-calendar-factory
+│   │ │ ├─xdg-desktop-portal-gnome.service
+│   │ │ │ └─8007 /usr/libexec/xdg-desktop-portal-gnome
+│   │ │ ├─dconf.service
+│   │ │ │ └─7762 /usr/libexec/dconf-service
+│   │ │ ├─gnome-keyring-daemon.service
+│   │ │ │ ├─6036 /usr/bin/gnome-keyring-daemon --foreground --components=pkcs11…
+│   │ │ │ └─8443 /usr/bin/ssh-agent -D -a /run/user/1000/keyring/.ssh
+│   │ │ ├─app-gnome-psensor-9225.scope
+│   │ │ │ └─9225 /usr/bin/psensor
+│   │ │ ├─app-gnome-update\x2dnotifier-10667.scope
+│   │ │ │ └─10667 /usr/bin/update-notifier
+│   │ │ ├─app-gnome\x2dsession\x2dmanager.slice
+│   │ │ │ └─gnome-session-manager@ubuntu.service
+│   │ │ │   └─7331 /usr/libexec/gnome-session-binary --systemd-service --sessio…
+│   │ │ ├─gcr-ssh-agent.service
+│   │ │ │ └─7276 /usr/libexec/gcr-ssh-agent --base-dir /run/user/1000/gcr
+│   │ │ ├─evolution-source-registry.service
+│   │ │ │ └─7429 /usr/libexec/evolution-source-registry
+│   │ │ ├─run-r5cb0e6ec50f64a34aa7514b2ede3c4df.scope
+│   │ │ │ └─12328 /usr/lib/podman/aardvark-dns --config /run/user/1000/containe…
+│   │ │ ├─snap.snapd-desktop-integration.snapd-desktop-integration.service
+│   │ │ │ ├─8341 /snap/snapd-desktop-integration/391/usr/bin/user-session-helpe…
+│   │ │ │ └─8403 /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-inte…
+│   │ │ ├─rygel.service
+│   │ │ │ └─7652 /usr/bin/rygel
+│   │ │ ├─app-gnome-firefox-33666.scope
+│   │ │ │ ├─ 33666 /usr/bin/firefox
+│   │ │ │ ├─ 34116 /usr/lib/firefox/crashhelper 33666 13 /tmp/ 15 2026092112171…
+│   │ │ │ ├─ 34722 /usr/lib/firefox/firefox-bin -contentproc -ipcHandle 0 -sign…
+│   │ │ │ ├─ 34724 /usr/lib/firefox/firefox-bin -contentproc -parentBuildID 202…
+│   │ │ │ ├─ 34743 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 34752 /usr/lib/firefox/firefox-bin -contentproc -parentBuildID 202…
+│   │ │ │ ├─ 34790 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 35016 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 35123 /usr/lib/firefox/firefox-bin -contentproc -parentBuildID 202…
+│   │ │ │ ├─ 35137 gjs -m /home/orsisam/.local/share/gnome-shell/extensions/gsc…
+│   │ │ │ ├─ 35161 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 35179 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 35184 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─ 35372 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─375245 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ ├─380786 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ │ └─388911 /usr/lib/firefox/firefox-bin -contentproc -isForBrowser -pre…
+│   │ │ ├─lerd-mailpit.service
+│   │ │ │ ├─libpod-payload-bfff7d6f9f8426334481d5144819eac596b98e7a04dbf5dd6c327c58eab7a643
+│   │ │ │ │ └─28579 /mailpit
+│   │ │ │ └─runtime
+│   │ │ │   ├─28543 rootlessport
+│   │ │ │   ├─28563 rootlessport-child
+│   │ │ │   └─28577 /usr/bin/conmon --api-version 1 -c bfff7d6f9f8426334481d514…
+│   │ │ ├─gnome-session-monitor.service
+│   │ │ │ └─7286 /usr/libexec/gnome-session-ctl --monitor
+│   │ │ ├─xdg-desktop-portal-gtk.service
+│   │ │ │ └─8044 /usr/libexec/xdg-desktop-portal-gtk
+│   │ │ ├─evolution-addressbook-factory.service
+│   │ │ │ └─7752 /usr/libexec/evolution-addressbook-factory
+│   │ │ ├─snap.telegram-desktop.telegram-desktop-6593b9ba-a850-4947-80ce-0d8213974fd2.scope
+│   │ │ │ └─7700 /snap/telegram-desktop/7150/usr/bin/telegram-desktop -autostar…
+│   │ │ ├─app-gnome-org.gnome.Evolution\x2dalarm\x2dnotify-7500.scope
+│   │ │ │ └─7500 /usr/libexec/evolution-data-server/evolution-alarm-notify
+│   │ │ ├─app-gnome-org.gnome.SettingsDaemon.DiskUtilityNotify-7532.scope
+│   │ │ │ └─7532 /usr/libexec/gsd-disk-utility-notify
+│   │ │ └─snap.tmux.tmux-b23f18fe-618c-4a8e-a249-7a2fdd1e8165.scope
+│   │ │   ├─ 14404 /snap/tmux/95/usr/local/bin/tmux -f /home/orsisam/.config/tm…
+│   │ │   ├─ 14428 /snap/tmux/95/usr/local/bin/tmux -f /home/orsisam/.config/tm…
+│   │ │   ├─ 18404 /usr/bin/zsh
+│   │ │   ├─ 18710 /usr/bin/zsh
+│   │ │   ├─ 19094 /usr/bin/zsh
+│   │ │   ├─ 19830 /usr/bin/zsh
+│   │ │   ├─ 20315 /usr/bin/zsh
+│   │ │   ├─ 21022 /usr/bin/zsh
+│   │ │   ├─ 21907 /usr/bin/zsh
+│   │ │   ├─ 22872 /usr/bin/zsh
+│   │ │   ├─ 23592 /usr/bin/zsh
+│   │ │   ├─355034 -zsh
+│   │ │   ├─392634 sh -c /home/orsisam/.tmux/plugins/tmux-continuum/scripts/con…
+│   │ │   ├─392635 sh -c /home/orsisam/.tmux/plugins/tmux-online-status/scripts…
+│   │ │   ├─392636 bash /home/orsisam/.tmux/plugins/tmux-continuum/scripts/cont…
+│   │ │   ├─392637 bash /home/orsisam/.tmux/plugins/tmux-online-status/scripts/…
+│   │ │   ├─392642 systemd-cgls
+│   │ │   ├─392643 bash /home/orsisam/.tmux/plugins/tmux-continuum/scripts/chec…
+│   │ │   ├─392644 bash /home/orsisam/.tmux/plugins/tmux-online-status/scripts/…
+│   │ │   ├─392652 bash /home/orsisam/.tmux/plugins/tmux-continuum/scripts/chec…
+│   │ │   ├─392653 bash /home/orsisam/.tmux/plugins/tmux-online-status/scripts/…
+│   │ │   ├─392654 tmux -V
+│   │ │   └─392655 tmux show-option -gqv @ping_timeout
+│   │ └─init.scope
+│   │   ├─3243 /usr/lib/systemd/systemd --user
+│   │   └─3693 (sd-pam)
+│   └─session-3.scope
+│     ├─6026 gdm-session-worker [pam/gdm-password]
+│     ├─6065 /usr/libexec/gdm-x-session --run-script env GNOME_SHELL_SESSION_MO…
+│     ├─6069 /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauth…
+│     └─7163 /usr/libexec/gnome-session-binary --session=ubuntu
+├─init.scope
+│ └─1 /sbin/init splash
+└─system.slice
+  ├─preload.service
+  │ └─2368 /usr/sbin/preload -s /var/lib/preload/preload.state
+  ├─[0mdocker-0efd00e74716670589b3f60724b7e59c3f6453202627ca153e40ed7e9a8d61b7.scope …
+  │ └─386015 mongod --auth --bind_ip_all
+  ├─[0mcontainerd.service …
+  │ ├─  3198 /usr/bin/containerd
+  │ ├─  5674 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 4920b8937b155…
+  │ └─385947 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 0efd00e747166…
+  ├─[0msystemd-udevd.service …
+  │ └─udev
+  │   └─569 /usr/lib/systemd/systemd-udevd
+  ├─cron.service
+  │ └─2089 /usr/sbin/cron -f -P
+  ├─virtlockd.service
+  │ └─2105 /usr/sbin/virtlockd
+  ├─thermald.service
+  │ └─2097 /usr/sbin/thermald --systemd --dbus-enable --adaptive
+  ├─[0mdocker-4920b8937b1554035cb8d890c6b80e52580ce2e9a221fdca59e0d93310657500.scope …
+  │ └─5722 /portainer
+  ├─[0mdocker.service …
+  │ ├─4899 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.so…
+  │ ├─5780 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 8000 -c…
+  │ ├─5787 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 8000 -contai…
+  │ ├─5803 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 9443 -c…
+  │ └─5811 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 9443 -contai…
+  ├─polkit.service
+  │ └─2070 /usr/lib/polkit-1/polkitd --no-debug
+  ├─networkd-dispatcher.service
+  │ └─2056 /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+  ├─rtkit-daemon.service
+  │ └─4615 /usr/libexec/rtkit-daemon
+  ├─gnome-remote-desktop.service
+  │ └─2046 /usr/libexec/gnome-remote-desktop-daemon --system
+  ├─accounts-daemon.service
+  │ └─2084 /usr/libexec/accounts-daemon
+  ├─wpa_supplicant.service
+  │ └─2208 /usr/sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netd…
+  ├─libvirtd.service
+  │ ├─4466 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf …
+  │ └─4467 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf …
+  ├─ModemManager.service
+  │ └─2239 /usr/sbin/ModemManager
+  ├─systemd-journald.service
+  │ └─509 /usr/lib/systemd/systemd-journald
+  ├─snap.cups.cups-browsed.service
+  │ ├─  3194 /bin/sh /snap/cups/1238/scripts/run-cups-browsed
+  │ ├─  4780 /bin/sh /snap/cups/1238/scripts/run-cups-browsed
+  │ └─214097 sleep 3600
+  ├─unattended-upgrades.service
+  │ └─3197 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-s…
+  ├─fwupd.service
+  │ └─82404 /usr/libexec/fwupd/fwupd
+  ├─colord.service
+  │ └─3773 /usr/libexec/colord
+  ├─NetworkManager.service
+  │ └─2199 /usr/sbin/NetworkManager --no-daemon
+  ├─nvidia-persistenced.service
+  │ └─2076 /usr/bin/nvidia-persistenced --user nvidia-persistenced --no-persist…
+  ├─snapd.service
+  │ └─2082 /usr/lib/snapd/snapd
+  ├─gdm.service
+  │ └─3639 /usr/sbin/gdm3
+  ├─systemd-machined.service
+  │ └─2096 /usr/lib/systemd/systemd-machined
+  ├─switcheroo-control.service
+  │ └─2092 /usr/libexec/switcheroo-control
+  ├─rsyslog.service
+  │ └─2130 /usr/sbin/rsyslogd -n -iNONE
+  ├─dnsmasq.service
+  │ └─3473 /usr/sbin/dnsmasq -x /run/dnsmasq/dnsmasq.pid -u dnsmasq -r /run/dns…
+  ├─snap.cups.cupsd.service
+  │ ├─3195 /bin/sh /snap/cups/1238/scripts/run-cupsd
+  │ ├─4586 cupsd -f -s /var/snap/cups/common/etc/cups/cups-files.conf -c /var/s…
+  │ └─4587 cups-proxyd /var/snap/cups/common/run/cups.sock /run/cups/cups.sock …
+  ├─snap.canonical-livepatch.canonical-livepatchd.service
+  │ └─3193 /snap/canonical-livepatch/414/canonical-livepatchd
+  ├─kerneloops.service
+  │ ├─4914 /usr/sbin/kerneloops --test
+  │ └─4926 /usr/sbin/kerneloops
+  ├─ecbd.service
+  │ └─2050 /usr/lib/epson-backend/ecbd start
+  ├─cups-browsed.service
+  │ └─4898 /usr/sbin/cups-browsed
+  ├─smartmontools.service
+  │ └─2079 /usr/sbin/smartd -n
+  ├─cups.service
+  │ └─3066 /usr/sbin/cupsd -l
+  ├─upower.service
+  │ └─5057 /usr/libexec/upowerd
+  ├─system-tor.slice
+  │ └─tor@default.service
+  │   └─4929 /usr/bin/tor --defaults-torrc /usr/share/tor/tor-service-defaults-…
+  ├─systemd-oomd.service
+  │ └─1471 /usr/lib/systemd/systemd-oomd
+  ├─systemd-resolved.service
+  │ └─1472 /usr/lib/systemd/systemd-resolved
+  ├─udisks2.service
+  │ └─2099 /usr/libexec/udisks2/udisksd
+  ├─dbus.service
+  │ └─2042 @dbus-daemon --system --address=systemd: --nofork --nopidfile --syst…
+  ├─systemd-timesyncd.service
+  │ └─1473 /usr/lib/systemd/systemd-timesyncd
+  ├─virtlogd.service
+  │ └─2106 /usr/sbin/virtlogd
+  ├─avahi-daemon.service
+  │ ├─2041 avahi-daemon: running [orsisam-desktop.local]
+  │ └─2113 avahi-daemon: chroot helper
+  └─systemd-logind.service
+    └─2095 /usr/lib/systemd/systemd-logind

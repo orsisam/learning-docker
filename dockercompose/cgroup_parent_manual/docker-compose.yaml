@@ -1,0 +1,14 @@
+name: test-cgroup
+
+services:
+    webserver:
+        image: nginx:alpine
+        container_name: test_nginx
+        ports:
+            - "8088:80"
+        cgroup_parent: backend_apps.slice
+
+    database:
+        image: mongo:latest
+        container_name: test_mongo
+        cgroup_parent: backend_apps.slice
