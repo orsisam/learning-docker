@@ -1,0 +1,12 @@
+name: test-deploy-limits
+
+services:
+    stress-test:
+        image: alpine
+        container_name: stress_app
+        command: sh -c "apk add --no-cache stress-ng && stress-ng --cpu 2 --vm 1 --vm-bytes 100M --timeout 60s"
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: 128M
