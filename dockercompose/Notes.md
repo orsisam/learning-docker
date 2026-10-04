@@ -1749,3 +1749,416 @@ services:
 ```
 
 
+
+#### `deploy`
+
+Atribut `deploy` adalah salah satu atribut paling krusial di Docker Compose
+Specification. Atribut `deploy` menggeser cara pandang kita dari sekedar
+"menyalakan container di mesin lokal" menjadi **"mengelola alokasi sumber daya
+(resource), skalabilitas (scaling), dan strategi pembaharuan (rolling update) di
+tingkat production."**
+
+Meskipun atribut ini awalnya dirancang untuk **Docker Swarm mode**, sejak
+spesifikasi Compose v2/v3 mutakhir, parameter `resources` dan `restart policy`
+di dalamnya dapat mengeksekusi batasan cgroups v2 langsung di Standalone Docker
+Compose Engine (asalkan menggunakan perintah `docker compose` / v2, bukan
+`docker-compose` / v1).
+
+
+##### Komponen Utama Atribut `deploy` di Project Nyata
+
+Dalam implementasi production, atribut `deploy` dibagi menjadi 4 blok
+spesifikasi utama:
+
+```yaml
+services:
+  backend-api:
+    image: my-app-image:v1.2.0
+    deploy:
+      mode: replicated
+      replicas: 3
+      resources: ...
+      restart_policy: ...
+      update_config: ...
+
+```
+
+Mari kita bedah satu per satu berdasarkan kasus nyata di lapangan.
+
+
+1. **Parameter `resources` (Pencegah Out-of-Memory / OOM Killer)**
+    Di dunia nyata, masalah paling sering yang menyebabkan server crash adalah
+    satu service yang mengalami *memory leak* lalu menghabiskan seluruh RAM
+    host, sehingga kernel Linux membunuh (OOM Kill) service-service kritis
+    lainnya (seperti Database).
+
+    `resources` membagi pembatasan menjadi dua tingkat:
+
+    * `limits` **(Batas Atas/Cap)**: Batas maksimum RAM/CPU yang boleh
+      dikonsumsi. Jika melewati batas RAM `limits`, container tersebut (dan
+      hanya container itu) yang akan di-OOM kill oleh kernel via *cgroups*.
+    * `reservations` **(Batas Bawah / Guarantees)**: Jumlah RAM/CPU minimal yang
+      wajib disediakan oleh OS Host container tersebut mau dinyalakan.
+
+    Contoh:
+
+    ```yaml
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'      # Maksimal menggunakan 1.5 core CPU
+          memory: 512M     # Maksimal RAM 512 MB
+        reservations:
+          cpus: '0.25'     # Minimal menjamin 0.25 core CPU
+          memory: 256M     # Minimal menjamin 256 MB RAM tersedia di host
+
+    ```
+
+2. **Parameter `restart_policy` (Aturan Self-Healing)**
+    Di Production, aplikasi bisa crash karenan unhandled exception. Tanpa `restart_policy`,
+    container yang mati akan tetap mati sampai ada SysAdmin yang melakukan
+    restart secara manual.
+
+    **Pilihan Kondisi (`condition`):**
+
+    - `on-failure`: Hanya restart jika container exit dengan kode error (exit
+      code != 0).
+    - `any`: Selalu restart dalam kondisi apa pun saat container mati.
+    - `none`: Jangan pernah restart otomatis.
+
+    **Contoh**:
+    ```yaml
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s          # Waktu jeda sebelum mencoba restart
+        max_attempts: 5    # Maksimal percobaan restart (mencegah infinite crash loop)
+        window: 120s       # Jangka waktu untuk menilai apakah restart dianggap sukses
+    ```
+
+3. **Parameter `update_config` (Strategi Zero-Downtime Deployment)**
+    Saat tim CI/CD melakukan rilis image versi baru, kita tidak ingin seluruh
+    instansi backend dimatikan secara bersamaan yang menyebabkan downtime bagi
+    pengguna. `update_config` mengatur strategi **Rolling Update**.
+
+    ```yaml
+    deploy:
+      update_config:
+        parallelism: 1       # Memperbarui 1 container dalam satu waktu
+        delay: 10s           # Menunggu 10 detik antar-container untuk memastikan status stabil
+        failure_action: rollback  # Jika update gagal, otomatis batalkan dan kembali ke versi lama!
+        order: start-first   # Nyalakan container baru dulu, baru matikan container lama (Zero Downtime)
+    ```
+
+4. **Parameter `mode` & `replicas` (Skalabilitas Swarm)**
+    Khusus saat dijalankan pada cluster **Docker Swarm**:
+
+    * `mode: replicated` **(Default)**: Jalankan service sebanyak jumlah
+      `replicas` yang ditentukan di seluruh cluster.
+    * `mode: global`: Jalankan tepat 1 instansi container di setiap node/server
+      yang bergabung di cluster (Sangat cocok untuk service Monitoring Agent
+      seperti Promotheus Exporter, Datadog, atau Fluentd Log Collector).
+
+
+##### Pengujian Praktis
+
+Mari kita buktikan bahwa pembatasan `resources` pada atribut `deploy`
+benar-benar bekerja di Standalone Docker Engine.
+
+Pada pengujian ini kita akan membuat skenario pembatasan CPU dan Memory
+
+1. **Buat File `docker-compose.yaml`:
+    ```yaml
+    name: test-deploy-limits
+
+    services:
+      stress-test:
+        image: alpine
+        container_name: stress_app
+        # Menjalankan perintah untuk memakan CPU & Memory secara intensif
+        command: sh -c "apk add --no-cache stress-ng && stress-ng --cpu 2 --vm 1 --vm-bytes 100M --timeout 60s"
+        deploy:
+          resources:
+            limits:
+              cpus: '0.5'    # Kita batasi CPU hanya Boleh pakai 0.5 Core (50%)
+              memory: 128M   # Batasi RAM maksimal 128 MB
+
+    ```
+
+2. **Jalankan Service**:
+```yaml
+docker compose up -d
+```
+
+3. **Pantau Penggunaan Resource secara Real-Time**:
+    Buka terminal baru dan jalankan perintah monitoring Docker bawaan:
+
+    ```bash
+    docker stats stress_app
+
+    ```
+
+Jika berjalan dengan baik maka bisa kita lihat bahwa kecepatan CPU dan kapasitas
+Memory dibatasi di bawah ambang yang ditentukan docker compose file.
+
+Container tersebut hanya menyala selama 1 menit, kemudian akan mati sendiri. Hal
+ini dikarenakan adanya parameter `timeout: 60s`.
+
+
+
+#### `develop`
+
+Jika atribut `deploy` dirancang untuk lingkungan production, maka atribut
+`develop` diciptakan untuk meningkatkan pengalaman pengembang (Development
+Experience / DevEx) di lingkungan lokal.
+
+Atribut `develop` memungkinkan fitur **Docker Compose Watch** (`docker compose watch`),
+yaitu mekanisme otomatis yang menyelaraskan perubahan kode program (source code)
+di mesin host lokal secara real-time ke dalam container tanpa perlu menghentikan
+atau rebuild container secara manual.
+
+##### Masalah Klasik yang Diselesaikan `develop` 
+
+Sebelum ada atribut `develop` (Compose Watch), alur kerja pengembang lokal
+biasanya menggunakan salah satu dari dua pendekatan:
+
+1. **Manual Rebuild**: Mengedit kode -> Jalankan `docker compose restart` atau
+   `docker compose build`. Proses ini lambat dan merusak alur kerja.
+2. **Bind Mount Biasa**(`volumes: .:/app`): Menyambungkan seluruh folder proyek
+   ke container. Pendekatan ini sering menimbulkan masalah kinerja (I/O
+   overhead) dan bentrokan dependencies (misal: folder `node_modules` atau
+   `vendor` di host menimpa yang ada di container).
+
+Dengan atribut `develop`, kita bisa menentukan aksi spesifik yang harus diambil
+Docker saat ada berkas yang berubah di host.
+
+##### Atribut `watch`
+
+Di bawah atribut `develop` terdapat atribut `watch` yang menentukan daftar
+aturan yang mengontrol layanan update otomatis berdasarkan perubahan file lokal. 
+
+##### Nilai-nilai Atribut `action`
+
+Atribut `action` punya 3 nilai utama:
+
+1. `sync` **(Synchronize Files)**
+    Aksi ini menginstruksikan Compose untuk memantau perubahan berkas/direktori
+    di host dan menyalinnya secara langsung ke dalam sistem berkas container
+    tanpa perlu memicu restart container.
+
+    - **Sifat**: Terjadi secara real-time dan bi-directional notification
+      (Compose mendeteksi kejadian create, write, delete).
+    - **Atribut Wajib untuk `sync`**:
+        * `target`: Lokasi absolut direktori di dalam container tempat berkas
+          akan disinkronkan.
+    - **Perilaku Sinkronisasi**: Jika file `src/index.js` diubah, Compose akan
+      mengkalkulasi relative path dari `path` lalu menyalin file yang berubah
+      tepat ke lokasi `target/index.js`.
+
+2. `rebuild` **(Trigger Image Rebuild & Service Re-create)**
+    Aksi ini digunakan ketika perubahan pada berkas memerlukan pembuatan ulang
+    container image dari awal.
+
+    - **Prosedur Eksekusi Compose saat `rebuild` dipicu**:
+        1. Memicu proses `docker build` menggunakan `Dockerfile` yang
+           didefinisikan pada atribut `build` service tersebut.
+        2. Menghentikan (stop) container lama.
+        3. Membuat dan menyalakan container baru menggunakan image baru yang
+           di-build.
+        4. Menghubungkan kembali container baru ke jaringan dan volume yang ada.
+    - **Kasus Penggunaan**: Digunakan untuk file manifest dependensi seperti
+      `package.json`, `composer.json`, `Go.mod`, `pom.xml`, atau `Dockerfile`
+      itu sendiri.
+
+3. `sync+restart` **(Sync File Then Restart Container)**
+    Inilah salah satu aksi penting yang sering terlewatkan. Aksi `sync+restart`
+    melakukan dua hal secara berurutan:
+
+    1. **Menyinkronkan berkas** dari host ke container (sama seperti `action:
+       sync`).
+    2. **Melakukan restart pada container** (`docker restart <container>`)
+       segera setelah proses salin selesai.
+
+    `sync+restart` sangat penting. Aplikasi berbasis bahasa pemrograman yang
+    dikompilasi atau di-interpretasi tanpa *Hot Reload/Live Reload* (seperti Go,
+    Rus, Java, atau aplikasi Python WSGI/Gunicorn tanpa `--reload`) tidak bisa
+    langsung membaca file baru meskipun file sudah disalin via `sync`. Dengan
+    `sync+restart`, file baru masluk dan proses aplikasi di-refresh tanpa perlu
+    memicu image rebuild penuh yang memakan waktu lama.
+
+4. `sync+exec` **(Sync File Then Execute Command)**
+    Opsi ini adalah gabungan dari prosedur `sync` dan atribut `exec`. Wajib ada
+    atribut `target`. Sama dengan `sync+restart`, nilai ini melakukan dua hal
+    secara berurutan:
+
+    1. **Menyinkronkan berkas** sumber dari host dengan container berdasarkan
+       atribut `target`.
+    2. **Mengeksekusi perintah di dalam container**.
+
+##### Parameter Lanjutan (Advanced Properties) pada `develop.eatch`
+
+Di dalam setiap elemen daftar `watch`, terdapat atribut-atribut konfigurasi
+tingkat lanjut yang mengontrol bagaimana Compose menangani file system.
+
+`exec` digunakan bersamaan dengan atribut `action: sync+exec`.
+
+**Properti-properti di dalam `exec`**
+
+| Properti | Tipe | Deskripsi |
+| -------- | ---- | --------- |
+| `command` | string/list | **\[WAJIB\]** Perintah yang dieksekusi di dalam container setelah proses `sync` selesai (contoh: `php artisan cache:clear` atau `["npm", "run", "build"]`). |
+| `user` | string | Pengguna yang mengeksekusi perintah di dalam container (misal: `www-data` atau `node`). |
+| `work_dir` | string | Direktori kerja tempat perintah dieksekusi. Jika tidak ditentukan akan menggunakan direktori yang sama dengan main service |
+| `env` | map/list | Environment variable tambahan khusus untuk eksekusi perintah ini. |
+
+
+##### Perbandingan 4 Nilai `action`
+
+```text
+Event Perubahan File di Host
+             │
+             ├──► action: sync ──────────► Sync File ke Container ──► (Selesai)
+             │
+             ├──► action: sync+exec ─────► Sync File ke Container ──► Jalankan `exec.command`
+             │
+             ├──► action: sync+restart ──► Sync File ke Container ──► Restart Container
+             │
+             └──► action: rebuild ───────► Rebuild Image ───────────► Re-create Container
+```
+
+
+##### Atribut `ignore`
+
+Digunakan untuk mengecualikan pola file atau direktori dari pemantauan file
+watcher. Menggunakan format pencocokan pola standar `.gitignore` / *glob
+patterns*.
+
+> **Catatan:** Jika kita tidak mendefinisikan `ignore`, Compose secara otomatis
+> mengabaikan file yang terdaftar di `.gitignore` dan `.dockerignore` proyek.
+
+
+##### Penanganan Overlapping / Nested Paths (Aturan Resolusi Konflik)
+
+Apa yang terjadi jika kita menentukan `path` yang saling bertumpuk (nested)?
+Compose mengatur urutan preseden evaluasi berdasarkan spresifisitas path
+terpanjang (**longest match wins**).
+
+Contoh:
+
+```yaml
+develop:
+  watch:
+    # Aturan 1: Pantau seluruh folder project -> lakukan SYNC
+    - path: .
+      action: sync
+      target: /app
+
+    # Aturan 2: Lebih spesifik! Jika file package.json berubah -> REBUILD
+    - path: ./package.json
+      action: rebuild
+
+    # Aturan 3: Lebih spesifik! Jangan sentuh folder build hasil kompilasi
+    - path: ./dist
+      action: sync
+      target: /app/dist
+      ignore:
+        - "./dist/**"
+
+```
+
+**Cara Compose Mengevaluasi**: Ketika `./package.json` berubah, meskipun
+`./package.json` berada di dalam direktori `.` (Aturan 1). Compose akan memilih
+**Aturan 2** karena  path `./package.json` lebih spesifik daripada `.`. Maka
+aksi yang dieksekusi  adalah `rebuild`, bukan `sync`.
+
+
+##### Cara Kerja Perilaku `docker compose watch` vs `docker compose up`
+
+Satu hal krusial dalam Compose Develom Specification adalah pemisahan alur
+eksekusi biasa dengan alur eksekusi watch:
+
+1. `docker compose up`:
+    Membaca seluruh file `docker-compose.yaml`, tetapi mengabaikan atribut
+    `develop` sepenuhnya. Container berjalan seperti biasa di mode standar.
+2. `docker compose watch`:
+    Mulai menjalankan service (seperti `docker compose up`), lalu mengunci
+    terminal untuk memuat *Event Loop File Watcher*.
+3. `docker compose up --watch`:
+    Cara pintas paling populer untuk menyalakan staxk container sekaligus
+    langsung mengaktifkan Compose Watch dalam satu perintah.
+
+##### Atribut `initial_sync`
+
+Ketika menggunakan actions `sync+x`, atribut ini bisa sangat berguna untuk
+memastikan file di dalam container up-to-date saat menjalankan sesi watch baru.
+
+Atribut `initial_sync` menginstruksikan runtime Compose, jika container untuk
+service telah ada, periksa file from atribut `path` telah tersinkronisasi di
+dalam container service.
+
+
+##### Atribut `path`
+
+Atribut `path` mendefinisikan path ke sumber kode/source code (relatif ke
+direktori project) untuk memonitor perubahan. Perubahan ke file apapun di dalam
+path, yang tidak cocok dengan aturan atribut `ignore`, akan memicu aksi pada
+konfigurasi develop.
+
+
+##### `target`
+
+Atribut `target` merupakan path absolut di dalam container. Bergunan untuk
+menentukan lokasi direktori tujuan di dalam container tempat berkas hasil
+sinkronisasi dari path akan ditempatkan.
+
+**Perilaku**:
+- Wajib untuk aturan yang menggunakan action `sync`, `sync+restart`,
+  `sync-exec`.
+- Tidak diperlukan jika action yang digunakan adalah `rebuild`, karena `rebuild`
+  memicu pembuatan ulang image penuh, bukan menyalin file ke container yang
+  sedang berjalan.
+
+##### `include`
+Berisi daftar string berupa pola berkas/glob pattern. Memiliki fungsi kebalikan
+dari atribut `ignore`, jadi atribut `include` menentukan hanya berkas atau
+direktori tertentu saja yang dimasukkan ke dalam daftar pemantauan.
+
+Dari pada menuliskan puluhan aturan di `ignore` untuk mengabaikan direktori/file
+tidak perlu, kita cukup menyebutkan beberapa jenis/pola berkas spesifik yang
+harus dipantau menggunakan `include`.
+
+Contoh :
+
+```yaml
+develop:
+  watch:
+    - path: ./src
+      action: sync
+      target: /app/src
+      include:
+        - "*.js"
+        - "*.vue"
+```
+
+
+##### Contoh Integrasi Lengkap
+
+```yaml
+services:
+  app:
+    build: .
+    develop:
+      watch:
+        # Menggunakan path, target, include, dan initial_sync secara bersamaan
+        - path: ./resources
+          action: sync
+          target: /var/www/html/resources
+          initial_sync: prefer
+          include:
+            - "*.php"
+            - "*.json"
+          ignore:
+            - "**/cache/**"
+```
+
+
