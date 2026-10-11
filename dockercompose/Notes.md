@@ -2570,3 +2570,75 @@ Agar tidak tertukar dengan atribut jaringan lainnya:
 - `dns_search`: Mengatur domain pencarian resolver DNS (`/etc/resolv.conf`) agar
   container bisa mencari domain secara otomatis saat melakukan lookup alamat UP
   via DNS.
+
+
+---
+
+
+### `driver_opts`
+
+Atribut `driver_opts` menentukan daftar opsi sebagai pasangan kunci-nilai untuk
+diteruskan ke driver. Opsi ini bergantung pada driver (driver-dependent).
+
+Apa maksud dari *driver-dependent* pada pernyataan di atas? Jadi secara teknis
+Docker Compose tidak peduli atau tidak tahu apa isi dari `driver_opts`. Docker
+hanya bertindak sebagai kurir yang mem-passing nilai tersebut ke driver yang
+dituju.
+
+Pada dokumentasi Docker, diberikan contoh berikut:
+
+```yaml
+services:
+  app:
+    networks:
+      app_net:
+        driver_opts:
+          com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+
+```
+
+Ini adalah **konfigurasi spesifik untuk endpoint network** dari service tersebut. Artinya:
+"Ketika service `app` bergabung ke network `appnet`, gunakan opsi-opsi ini untuk attachment-nya."
+
+Penggunaan `driver_opts` di level ini digunakan ketika kiat menggunakan
+**Network Driver Khusus** (bukan `bridge` standar) yang membutuhkan konfigurasi
+spesifik untuk endpoint (titik sambung) container tersebut. Jika hanya ingin
+membatasi suatu container agar hanya bisa diakses dari jaringan lokal host
+(`127.0.0.1`/`localhost`) maka cukup dengan menggunakan port public dengan
+alamat ip yang terdefinisi.
+
+**Contoh Kasus:** Menggunakan Driver `macvlan`
+Misalkan kita ingin container mendapatkan IP asli dari jaringan LAN kantor
+(bukan IP internal Docker 172.17.x.x). Kita menggunakan driver `macvlan`.
+Beberapa setup `macvlan` memerlukan kita secara eksplisit menentukan MAC Address
+agar tidak ditolak oleh switch jaringan kantor.
+
+```yaml
+services:
+  server-kantor:
+    image: nginx:alpine
+    networks:
+      jaringan_kantor:
+        driver_opts:
+          # Mengirim instruksi spesifik ke macvlan driver
+          com.docker.network.endpoint.macaddress: "02:42:ac:11:00:02"
+
+networks:
+  jaringan_kantor:
+    driver: macvlan
+    driver_opts:
+      parent: eth0 # Interface fisik di host
+
+```
+
+Jadi perlu ditekankan jika:
+
+1. **Ingin mengatur Port dari Host ke Container**, gunakan atribut `ports`
+   (contoh: `"127.0.0.1:8088:80"`). Jangan gunakan `driver_opts`.
+2. **Ingin mengatur bagaimana Container terhubung ke Network Internal**, gunakan
+   atribut `networks`.
+3. **Kapan pakai `driver_opts` di service network?**. Hanya ketika kita
+   menggunakan driver network khusus (seperti `macvlan`, `overlay`, atau plugin
+   pihak ketiga) yang membutuhkan parameter teknis spesifik untuk endpoint
+   container tersebut.
+
