@@ -2326,3 +2326,247 @@ Dari hasil di atas:
 
 
 
+---
+
+### `devices`
+
+Jika sebelumnya kita membahas `device_cgroup_rules` yang berfungsi mengatur izin
+akses tingkat kernel (cgroup_permission), maka atribut `devices` adalah
+mekanisme praktis untuk memetakan (mapping) perangkat keras fisik secara fisik
+dari host ke dalam container.
+
+Atribut ini merupakan padanan langsung dari flag `--device` pada perintah CLI
+`docker run`.
+
+#### Fungsi Utama Atribut `devices`
+Atribut `devices` melakukan dua hal secara bersamaan dalam satu konfigurasi:
+
+1. **Melakukan bind-mount node perangkat** (file khusus di direktori `/dev/`
+   pada host) ke dalam direktori `/dev/` di dalam container.
+2. **Secara otomatis memberikan izin akses (read, write, mknod)** untuk
+   perangkat tersebut, sehingga tidak perlu repot menuliskan aturan
+   `device_cgroup_rules` secara manual untuk kasus penggunaan standar.
+
+#### Format Penulisan
+Atribut `devices` ditulis dalam bentuk daftar (list). Format pemetaannya
+menggunakan struktur pemisah titik dua (`:`), mirip seperti volumes:
+
+```yaml
+services:
+  <service_name>:
+    devices:
+      - "host_device_path:container_device_path:permissions"
+
+```
+
+- `host_device_path`: Path absolut perangkat fisik di mesin host (misal:
+  `/dev/ttyUSB0`).
+- `container_device_path`: (Opsional) Path penamaan perangkat di dalam
+  container. Jika dikosongkan atau sama dengan host, path-nya akan sama persis.
+- `permissions`: (Opsional) Hak akses yang diizinkan, kombinasinya meliputi:
+    - `r` (Read)
+    - `w` (Write)
+    - `m` (Mknod)
+    - Contoh: `:rwm` (Read, Write, Mknod - biasanya menjadi default jika tidak
+      ditulis).
+
+#### Contoh Implementasi Kasus Nyata
+
+##### A. Akses USB/Serial Port untuk perangkat IoT (Arduino / ESP32)
+Jika container kita butuh berkomunikasi dengan mikrokontroler yang dipasang ke
+port USB komputer:
+
+```yaml
+services:
+  iot-flasher:
+    image: python:3.11-alpine
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+
+```
+
+##### B. Akses GPU untuk Aplikasi AI/Machine Learning (Nvidia)
+Meskipun untuk GPU modern saat ini disarankan menggunakan runtime khusus
+(`deploy.resoureces.reservations.devices`), untuk perangkat hardware accelerator
+kustom atau integrasi langsung via device node:
+
+```yaml
+services:
+  ai-inference:
+    image: pytorch/pytorch:latest
+    devices:
+      - "/dev/nvidia0:/dev/nvidia0"
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+
+```
+
+##### C. Akses WebCam/Kamera USB untuk Aplikasi Streaming/Computer Vision
+Jika aplikasi di dalam container perlu mengakses kamera eksternal yang terhubung
+ke host:
+
+```yaml
+services:
+  video-streamer:
+    image: opencv-app:latest
+    devices:
+      - "/dev/video0:/dev/video0" # Memetakan webcam pertama di host
+
+```
+
+#### Hubungan Antara `devices` dan `device_cgroup_rules`
+Di proyek nyata, kedua atribut ini sering kali berjalan berdampingan atau saling
+melengkapi:
+
+- Gunakan `devices` jika kita hanya perlu menyambungkan perangkat keras standar
+  dari host ke container secara langsung (praktis dan langsung jalan).
+- Gunakan `device_cgroup_rules` jika kita memerlukan kontrol tingkat lanjut yang
+  sangat spesifik (misalnya menggunakan wildcard `*` pada major/minor number
+  untuk meloloskan sekumpulan driver perangkat tanpa harus mendaftarkan file
+  `/dev/` satu per satu).
+
+
+---
+
+### `dns`
+Atribut `dns` digunakan untuk menentukan alamat IP server DNS kustom yang akan
+digunakan oleh container, alih-alih menggunakan DNS default dari Docker daemon
+(seperti `8.8.8.8` atau DNS dari router host).
+
+- **Format**: bisa berupa list atau nilai tunggal misal `8.8.8.8`
+- **Kasus Penggunaan Nyata**: ketika container berada di jaringan internal
+  perusahaan yang memerlukan akses ke server DNS lokal internal (Internal DNS
+  Server / Pi-hole / CoreDNS) untuk meresolusikan domain privat (seperti
+  `*.internal.net`).
+
+**Contoh Konfigurasi**:
+```yaml
+services:
+  app:
+    image: nginx:alpine
+    dns:
+      - 10.0.0.2     # IP server DNS internal utama
+      - 1.1.1.1      # IP server DNS publik cadangan (fallback)
+
+```
+
+
+---
+
+### `dns_opt`
+
+Atribut `dns_opt` digunakan untuk memasukkan opsi konfigurasi tambahan (resolver
+options) ke dalam file `/etc/resolv.conf` di dalam container. Opsi ini
+diteruskan langsung ke resolver sistem operasi Linux (`libc`).
+
+- **Format:** Berbentuk daftar/list string berisi pasangan opsi dan nilai sesuai
+  standar file `resolv.conf` Linux.
+- **Kasus Penggunaan Nyata:**Mengatur waktu tunggu (timeout), jumlah percobaan
+  ulang (attempts), atau mengubah perilaku pencarian domain (seperti `ndots`).
+
+```yaml
+services:
+  app:
+    image: my-app:latest
+    dns_opt:
+      - "timeout:2"   # Waktu tunggu maksimum (dalam detik) sebelum query DNS dianggap timeout
+      - "attempts:3"  # Berapa kali mencoba query jika server DNS pertama gagal
+      - "ndots:2"     # Menentukan berapa minimal titik (.) dalam domain sebelum dianggap sebagai absolute domain
+
+```
+
+
+---
+
+### `dns_search`
+
+Atribut `dns_search` digunakan untuk menambahkan domain pencarian default
+(search domain) yang akan otomatis digabungkan (appended) jika container mencoba
+melakukan resolusi hostname pendek (tanpa nama domain lengkap).
+
+- **Format:** Berbentuk list string nama domain.
+- **Kasus Penggunaan Nyata:** Jika container mencoba melakukan ping ke hostname
+  `database-server`, dan kita mendefinisikan `dns-search: [example.local,`
+  `corp.internal]`, maka sistem akan otomatis mencoba mencari:
+  1. `database-server`
+  2. `database-server.example.local`
+  3. `database-server.corp.internal`
+
+**Contoh Konfigurasi:**
+
+```yaml
+services:
+  app:
+    image: my-microservice:latest
+    dns_search:
+      - staging.local
+      - internal.net
+
+```
+
+---
+
+### `domainname`
+
+Atribut `domainname` digunakan untuk mengatur **nama domain NIS (Network
+Information Service) atau domain YP (Yellow Pages)** secara spesifik untuk
+sebuah container.
+
+Meskipun namanya mirip dengan konsep domain web, atribut ini memiliki fungsi
+khusus di tingkat sistem operasi Linux di dalam container.
+
+#### Fungsi Utama `domainname`
+Di dalam sistem Linux, nama host (hostname) sebuah mesin dibagi menjadi dua
+bagian identik yang dikonfigurasi melalui *system call* kernel:
+
+1. **Hostname:** Nama unik mesin itu sendiri (di Docker Compose diatur via
+   atribut `hostname`).
+2. **Domainname:** Nama domain tempat mesin tersebut terdaftar dalam jaringan
+   NIS/YP (diatur via atribut `domainname`).
+
+Jika kita mendefinisikan atribut ini, Docker akan menuliskan nilai tersebut ke
+dalam file sistem `/etc/domainname` (atau menggunakan fungsi kernel `setdomainname`)
+di dalam container saat container tersebut pertama kali diinisialisasi.
+
+#### Format Penulisan
+Atribut `domainname` menerima nilai berupa string tunggal (scalar string).
+
+```yaml
+services:
+  app:
+    image: my-app:latest
+    hostname: web-node-01
+    domainname: internal.mycompany.local
+
+```
+
+
+#### Kapan Atribut ini Digunakan di Dunia Nyata?
+Di era modern containerisasi berbasis web, atribut `domainname` sangat jarang
+digunakan untuk aplikasi web biasa, karena komunikasi antar-container di Docker
+Compose sudah otomatis diselesaikan oleh Docker Internal DNS menggunakan nama
+service atau hostname (`hostname`).
+
+Atribut ini biasanya baru digunakan jika:
+
+1. **Aplikasi Legendaris / Enterprise:** Menggunakan arsitektur sistem
+   terdistribusi lama yang masih mengandalkan protokol NIS (Network Information
+   Service) untuk sinkronisasi akun pengguna atau konfigurasi jaringan terpusat.
+2. **Kluster Khusus / HPC (High-Performance Computing):** Aplikasi kluster sains
+   atau pangkalan data terdistribusi tertentu yang memeriksa NIS domain untuk
+   memvalidasi keanggotaan node dalam satu jaringan privat yang sama.
+3. **Pengujian Jaringan Spesifik:** Saat kita sedang menguji konfigurasi skrip
+   otomasi sistem Linux (bash/ansible) yang bergantung pada pembacaan perintah
+   `domainname` atau `nisdomainname` dari dalam container.
+
+**Perbedaan `domainname` vs `hostname` vs `dns_search`
+
+Agar tidak tertukar dengan atribut jaringan lainnya:
+
+- `hostname`: Mengatur nama host container (misal: `web-server-01`). Bisa dicek
+  dengan perintah `hostname`.
+- `domainname`: Mengatur NIS/YP domain sistem operasi container (misal:
+  `company.local`). Bisa dicek dengan perintah `domainname`.
+- `dns_search`: Mengatur domain pencarian resolver DNS (`/etc/resolv.conf`) agar
+  container bisa mencari domain secara otomatis saat melakukan lookup alamat UP
+  via DNS.
