@@ -2162,3 +2162,167 @@ services:
 ```
 
 
+
+---
+
+### `device_cgroup_rules`
+
+Karena atribut ini ada hubungannya dengan cgroup pada kernel Linux. Kita
+terlebih dahulu akan bahas cgroup pada Linux kernel.
+
+#### 1. Apa Itu *cgroup* di Kernel Linux?
+
+**cgroups (Control Groups)** adalah fitur kernel Linux yang mengisolasi,
+membatasi, memprioritaskan, dan mencatat penggunaan sumber daya (resource)
+seperti CPU, RAM, I/O disk, dan akses ke perangkat fisik/hardware (devices)
+untuk sekumpulan proses.
+
+Khusus untuk **Devices cgroup (Device Control Group)**, kernal Linux
+menggunakannya sebagai **Lapisan keamanan (security layer)** untuk mengontrol
+apakah sebuah proses (dalam hal ini container) diizinkan membaca (read), menulis
+(write), atau membuat (mknod) berkas perangkat fisik (device node) yang berada
+di bawah direktori `/dev/` pada host.
+
+##### Konseop Karakteristik Device Node di Linux
+
+Setiap perangkat keras di Linux (seperti GPU, USB, Harddisk, Serial Port)
+diwakili oleh device node di `/dev/` dan diidentifikasi oleh 3 atribut utama:
+
+1. **Type (Tipe Device):**
+    - `c` (Character Device): Mengirim/menerima data karakter demi karakter
+      (contoh: `/dev/null`, GPU NVIDIA `/dev/nvidia*`, serial port `/dev/ttyUSB0`).
+    - `b` (Block Device): Mengakses data dalam blok-blok memori (contoh: hardisk/SSD
+       `/dev/sda`, `/dev/nvme0n1`).
+    - `a` (All): Mencakup seluruh tipe perangkat (`c` dan `b`).
+
+2. **Major Number**: Identifikasi driver/kategori perangkat keras (misal: major
+   `8` untuk SCSI/SATA disk, major `243` untk GPU tertentu).
+
+3. Minor Number: Identifikasi unit/instansi spesifik dari driver tersebut
+   (misal: `sda1` vs `sda2`, atau GPU 0 vs GPU 1).
+
+
+#### 2. Mengenal Atribut `device_cgroup_rules` di Docker Compose
+
+Atribut `device_cgroup_rules` digunakan untuk menambahkan aturan (rule) izin ke
+device cgroup secara granular ke dalam container tanpa harus memberikan akses
+root/unrestricted penuh seperti flag `--privileged`.
+
+**Mengapa ini Diperlukan?**
+
+Secara default, Docker memblokir akses ke hampir seluruh perangkat fisik di host
+demi keamanan. Jika aplikasi di dalam container membutuhkan akses ke GPU,
+webcam, akselerator TPU, atau USB/Serial device, kita harus mengizinkannya via
+`device_cgroup_rules` (dan biasanya dipadukan dengan `volumes` untuk mount file
+`/dev/` terkait).
+
+#### 3. Format Penulisan `device_cgroup_rules`
+
+Format penulisan string aturan (rule string) mengikuti spesifikasi standar
+kernel Linux:
+
+```text
+type major:minor access
+```
+
+**Penjelasan Komponen:**
+
+1. `type`: `c` (character), `b` (block), `a` (all).
+2. `major:minor`: Angka major dan minor ID dari perangkat. Kita bisa menggunakan
+   karakter wildcards `*` untuk mencocokkan semua angka.
+3. `access`: Kombinasi dari satu atau lebih hak akses berikut:
+    - `r`: Read (Membaca dari perangkat).
+    - `w`: Write (Menulis ke perangkat).
+    - `m`: Mknod (Membuat device node baru menggunakan sistem panggilan
+      `mknod`).
+
+#### 4. Contoh Format Penulisan & Kasus Nyata
+
+##### Kasus A: Memberikan Akses ke GPU / Akselerator Spesifik (Character Device)
+
+Misalkan kita memiliki perangkat khusus dengan Major number `243` (Character
+Device) dan ingin mengizinkan container membaca dan menulis ke seluruh minor
+device dari major tersebut:
+
+```yaml
+services:
+  app:
+    image: my-gpu-app:latest
+    device_cgroup_rules:
+      - 'c 243:* rmw' # Mengizinkan Character device, Major 243, Minor apa saja, Hak: Read, Mknod, Write
+    volumes:
+      - /dev/custom_gpu0:/dev/custom_gpu0
+
+```
+
+##### Kasus B: Akses ke Serial Port/USB Converter (`/dev/ttyUSB0`)
+
+Peralatan IoT atau sistem tertanam (embeded system) sering membutuhkan akses ke
+USB-to-Serial converter. Umumnya menggunakan Character device tipe `c` dengan
+Major number `188`:
+
+```yaml
+services:
+  iot-gateway:
+    image: my-iot-app:latest
+    device_cgroup_rules:
+      - 'c 188:* rmw' # Mengizinkan akses ke semua USB Serial Controller (Major 188)
+    volumes:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+
+```
+
+##### Kasus C: Mengizinkan Akses ke Semua Block Device (Disk)
+
+Jika container butuh akses tingkat rendah (raw access) ke seluruh Block device
+(misal untuk aplikasi monitoring disk atau storage formatter):
+
+```yaml
+services:
+  disk-monitor:
+    image: my-disk-tool:latest
+    device_cgroup_rules:
+      - 'b *:* r' # Mengizinkan Read-Only ke SEMUA Block Devices
+
+```
+
+
+#### Cara Mengecek Major & Minor Number di Host Linux
+
+Untuk mengetahui angka Major dan Minor dari suatu perangkat di mesin host Linux,
+gunakan perintah `ls -l` pada file di bawah direktori `/dev/`:
+
+```bash
+ls -l /dev/ttyUSB0
+```
+
+> **Catatan:** Pada percobaan yang saya lakukan perlu menggunakan user root atau
+> sudo agar angka Major/Minor tampil.
+
+**Contoh Output:**
+
+```text
+crw-rw---- 1 root dialout 188, 0 Oct 4 10:00 /dev/ttyUSB0
+│                          │   │
+│                          │   └── Minor Number (0)
+│                          └────── Major Number (188)
+└──────────────────────────────── Tipe 'c' (Character Device)
+```
+
+Dari hasil di atas:
+- Tipe: `c`
+- Major: `188`
+- Minor: `0`
+- Format rule: `'c 188:0 rmw'` atau `'c 188:* rmw'`
+
+
+#### Ringkasan Perbandingan Pendekatan Keamanan
+
+| Metode di Docker Compose | Tingkat Keamanan | Keterangan |
+| ------------------------ | ---------------- | ---------- |
+| `privileged: true` | **Sangat Rendah (Bahaya)** | Membuka seluruh proteksi kernel, memberikan akses root penuh ke seluruh hardware host. | 
+| `devices:` | **Sedang** | Secara otomatis memetakan file `/dev/` sekaligus mengizinkan akses cgroup dasar untuk perangkat spesifik tersebut. |
+| `device_cgroup_rules` | **Tinggi (Granular & Best Practice)** | Hanya membukan hak cgroup (read/write/mknod) untuk kombinasi Major/Minor spesifik tanpa memberikan hak istimewa berlebih. |
+
+
+
