@@ -1,0 +1,21 @@
+services:
+    # 1. SERVICE NORMAL (Perilaku Bawaan Image)
+    db_normal:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_PASSWORD: rahasia123
+        # Tidak ada entrypoint/command di sini
+        # Docker akan menjalankan: docker-entrypoint.sh postgres
+
+    # 2. SERVICE DEBUGGING (Override Entrypoint)
+    db_debug:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_PASSWORD: rahasia123
+
+        # OVERRIDE ENTRYPOINT: Ganti dengan shell biasa
+        entrypoint: ["/bin/sh"]
+
+        # COMMAND: Perintahkan shell untuk tidur selamanya
+        # Agar container tidak langsung mati (exit) setelah shell dibuka.
+        command: ["-c", "sleep infinity"]
