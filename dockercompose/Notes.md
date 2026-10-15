@@ -2642,3 +2642,262 @@ Jadi perlu ditekankan jika:
    pihak ketiga) yang membutuhkan parameter teknis spesifik untuk endpoint
    container tersebut.
 
+---
+
+### `entrypoint`
+
+Atribut ini merupakan salah satu konsep fundamental dan sering disalah pahami di
+Docker. Sering kali konsep dari `entrypoint` disamakan dengan atribut `command`.
+
+`entrypoint` mendeklarasikan default entrypoint untuk container service. Atribut
+ini akan menimpa instruksi `ENTRYPOINT` dari Dockerfile.
+
+Jika `entrypoint` tidak bernilai null, Compose akan mengabaikan command default
+dari image, misal instruksi `CMD` di Dockerfile. Jadi ketika kita mendefinisikan
+ulang entrypoint di docker-compose file, maka secara otomatis kita juga harus
+mendefinisikan ulang command di dalamnya.
+
+Jika `entrypoint` bernilai `[]` (list kosong) atau `''` (string kosong),
+entrypoint default juga diabaikan, dan nilai dari entrypoint dan command akan
+bernilai kosong.
+
+**Contoh Sederhana**:
+
+```yaml
+services:
+    # 1. SERVICE NORMAL (Perilaku Bawaan Image)
+    db_normal:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_PASSWORD: rahasia123
+        # Tidak ada entrypoint/command di sini
+        # Docker akan menjalankan: docker-entrypoint.sh postgres
+
+    # 2. SERVICE DEBUGGING (Override Entrypoint)
+    db_debug:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_PASSWORD: rahasia123
+
+        # OVERRIDE ENTRYPOINT: Ganti dengan shell biasa
+        entrypoint: ["/bin/sh"]
+
+        # COMMAND: Perintahkan shell untuk tidur selamanya
+        # Agar container tidak langsung mati (exit) setelah shell dibuka.
+        command: ["-c", "sleep infinity"]
+```
+
+Jalankan docker-compose tersebut:
+
+```bash
+docker compose up -d
+```
+
+Docker compose file di atas akan membuat dua service dari image yang sama. Satu
+service dijalankan secara normal/default, sedangkan satunya lagi dijalankan
+dengan menimpa instruk `entrypoint` dan `command`.
+
+Dari contoh di atas kita akan memeriksa apakah postgre berjalan atau tidak di
+masing-masing service.
+
+**Uji 1: Cek Service Normal**
+
+```bash
+docker compose exec db_normal /bin/sh
+```
+
+Di dalam shell, ketik `ps aux`. Kita akan melihat proses `postgres` sedang
+berjalan. Ini karena entrypoint dan command default image berjalan dengan sempurna.
+
+**Uji 2: Cek Service Debug (Override)**
+
+```bash
+docker compose exec db_debug /bin/sh
+```
+
+Sama, di dalam shell ketik perintah `ps aux`. Hasilnya, kita tidak menemukan
+proses postgres yang berjalan. Yang ada hanya proses `sleep infinity`.
+
+
+#### Bagaiman Cara Menentukan Perintah di `entrypoint` dan `command`
+Ada kalanya kita bingung apakah sebuah perintah ini masuk ke entrypoint atau
+command. Apa yang menjadi pertimbangan dalam peletakan perintah di dua atribut ini.
+
+Apakah karena kompleksitas dari perintah atau ada hal lain?
+
+Tujuan dari perintah yang diletakkan di `entrypoint` adalah untuk mengunci
+perilaku dasar container. Bisa dikatakan perintah yang ingin dibuat paten dan
+tetap tanpa variable tambahan yang bisa diubah, dan memastikan aplikasi di dalam
+container berjalan dengan benar. Maka pilihannya adalah `entrypoint`.
+
+
+---
+
+### `env_file`
+
+Atribut `env_file` digunakan untuk menentukan satu atau lebih file yang berisi
+environment variable yang diteruskan ke container saat service dijalankan.
+
+```yaml
+env_file: .env
+```
+
+#### Perbedaan Krusial (`env_file` vs `.env` otomatis vs `environment`)
+
+- **`env` Otomatis (Root Project)**: Digunakan untuk melakukan variable
+  interpolation di dalam file `docker-compose.yaml` itu sendiri sebelum
+  container dibuat.
+- Atribut `env_file` pada Service: Digunakan khusus untuk menyuntikkan variable
+  ke dalam proses yang berjalan di dalam container. Variable di dalam `env_file`
+  tidak otomtis bisa dipakai untuk interpolasi file `docker-compose.yaml`
+  kecuali dideklarasikan secara eksplisit.
+
+#### Format Penulisan & Opsi Struktur
+
+Atribut `env_file` dapat ditulis dalam bentuk string tunggal (untuk satu file)
+atau daftar (list - untuk beberapa file sekaligus). Selain itu, Compose
+mendukung format objek/map tingakat lanjut untuk mengatur opsi spesifik seperti
+`path` dan `format`.
+
+1. **Format Sederhana (List of String)**
+    ```yaml
+    services:
+      app:
+        image: my-app:latest
+        env_file:
+          - .env
+          - .env.secret
+
+    ```
+
+2. **Format Objek (Adavanced Syntax dengan Atribut `path` dan `format`)**
+    Mulai versi Compose modern, kita mendefinisikan objek terstruktur untuk
+    setiap *env file*.
+
+    ```yaml
+    services:
+      app:
+        image: my-app:latest
+        env_file:
+          - path: ./config/.env.common
+            format: dotenv # (Default) Format standar key=value
+          - path: ./config/.env.override
+            required: true # Mengatur apakah file wajib ada atau opsional
+    ```
+
+
+#### Urutan Prioritas & Pemuatan Ganda (*Presedence & Overriding*)
+
+Jika kita mendefinisikan lebih dari satu file di dalam `env_file`, Docker
+Compose membaca file-file tersebut secara berurutan dari atas ke bawah.
+
+- Jika variable yang sama (`DB_HOST`) didefinisikan di `.env.common` dan
+  kemudian didefinisikan ulang di `.env.override` di bawahnya, nilai dari file
+  yang berada di urutan lebih bawah akan menimpa (*override*) nilai sebelumnya.
+- **Prioritas tertinggi**: Variable yang didefinisikan secara langsung di bawah
+  atribut `environment:` (inline di `docker-compose.yaml`) akan selalu menimpa
+  nilai yang berasal dari `env_file`.
+
+
+#### Atribut Pendukung di Dalam `env_file` 
+
+Berdasarkan dokumentasi resmi Docker Compose, setiap elemen di dalam daftar
+`env_file` mendukung properti berikut:
+
+1. `path` (string, opsional): Path lokasi file environment, dihitung relatif
+   terhadap letak file `docker-compose.yaml`.
+2. `format` (string, opsional): Menentukan format parsing file. Nilai defaultnya
+   adalah `dotenv` (format baris standar `KEY=VAL`), namun beberapa implementasi
+   mendukung format lain seperti json tergantung ekstensi file.
+3. `required` (boolan, opsional):
+    - Jika bernilai `true` (default pada versi Compose terbaru), Docker akan
+      menghentikan proses dan mengeluarkan error jika file yang ditunjuk tidak
+      ditemukan.
+    - Jika bernilai false, Docker akan mengabaikannya jika file tidak ada tanpa
+      memicu error.
+
+
+```yaml
+services:
+  web:
+    image: nginx:alpine
+    env_file:
+      # Memuat konfigurasi dasar aplikasi
+      - path: ./env/common.env
+        required: true
+
+      # Memuat konfigurasi spesifik environment (menimpa common.env jika ada key yang sama)
+      - path: ./env/production.env
+        required: false
+
+    # Variabel inline di sini memiliki prioritas paling tinggi dibanding env_file
+    environment:
+      - APP_ENV=production
+
+```
+
+#### Contoh Implementasi Sederhana Atribut `env_file`
+
+1. **Buat Direktori Proyek Baru**
+    Buka terminal di komputer, lalu buat folder baru dan masuk ke dalam folder tersebut:
+
+    ```bash
+    mkdir env_file
+    cd env_file
+    ```
+
+2. **Buat File Environment (`.env`)**
+    Buat folder `env` kemudian buat file `.env` di dalamnya. Lalu isi file
+    `.env` tersebut dengan beberapa variable berikut:
+
+    ```env
+    APP_NAME=AplikasiMandiri
+    APP_PORT=8080
+    DB_HOST=localhost
+    DB_NAME=demo_database
+
+    ```
+
+
+3. **Buat File `docker-compose.yaml`**
+    Buat file bernama `docker-compose.yaml` di folder utama, lalu masukkan
+    konfigurasi berikut:
+
+    ```yaml
+    services:
+        demo:
+            image: alpine:latest
+            # Menggunakan env_file untuk memuat variabel dari file .env
+            env_file:
+                - path: env/.env
+                  required: true
+            # Perintah untuk mencetak seluruh environment variable yang ada di dalam container
+            command: sh -c "printenv"
+    ```
+
+4. **Jalankan Docker Compose**
+    Terakhir jalankan service menggunakan perintah docker compose
+
+    ```yaml
+    docker compose up
+
+    ```
+
+    Kemudian perhatikan hasilnya, jika berhasil maka kita akan mendapatkan
+    output seperti berikut:
+
+    ```text
+    demo-1  | HOSTNAME=13d54fb9ecca
+    demo-1  | SHLVL=1
+    demo-1  | HOME=/root
+    demo-1  | DB_NAME=demo_database
+    demo-1  | APP_PORT=8080
+    demo-1  | APP_NAME=AplikasiMandiri
+    demo-1  | PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    demo-1  | PWD=/
+    demo-1  | DB_HOST=localhost
+    demo-1 exited with code 0
+    ```
+
+
+

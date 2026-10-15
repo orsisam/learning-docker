@@ -1,0 +1,9 @@
+services:
+    demo:
+        image: alpine:latest
+        # Menggunakan env_file untuk memuat variabel dari file .env
+        env_file:
+            - path: env/.env
+              required: true
+        # Perintah untuk mencetak seluruh environment variable yang ada di dalam container
+        command: sh -c "printenv"
