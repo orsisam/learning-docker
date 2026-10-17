@@ -2900,4 +2900,134 @@ services:
     ```
 
 
+---
 
+### `environment`
+
+Atribut `environment` digunakan untuk menambahkan variabel lingkungan
+(*environment variable*) secara langsung (*inline*) di dalam file konfigurasi
+`docker-compose.yaml` pada suatu service. Variabel-variabel ini akan disuntikkan
+secara otomatis ke dalam proses utama container saat container tersebut berjalan.
+
+> **Catatan !**: Format penulisan bisa berupa array atau map. Nilai **boolean**
+> apapun (`true`, `false`, `yes`, `no`) harus diapit tanda petik dua (`""`)
+> untuk memastikan nilai tidak akan dikonversi oleh YAML parser.
+
+#### Format Penulisan Yang Didukung
+
+Atribut `environment` mendukung dua bentuk sintaks utama:
+
+1. **Format Daftar (Array / List Form)**: Menggunakan tanda penghubung `-`
+   dengan format `KEY=VALUE`. Format ini sangat mirip dengan yang biasa
+   digunakan dalam file `.env` atau CLI `docker run -e`.
+
+    ```yaml
+    services:
+        demo-env:
+            image: alpine:latest
+            environment:
+                - APP_ENV=development
+                - APP_DEBUG=true
+                - PORT=3000
+    ```
+
+2. **Format Map / Dictionary**: Menggunakan struktur *key-value* secara langsung
+   tanpa tanda hubung. Format in sangat disarankan karenan lebih mudah dibaca
+   dan mendukung nilai kosong (null).
+
+    ```yaml
+    services:
+        demo-env:
+            image: alpine:latest
+            environment:
+                APP_ENV: development
+                APP_DEBUG: true
+                PORT: 3000
+    ```
+
+
+> **Catatan!**: Jika atribut `environment` dan `env_file` sama-sama digunakan
+> pada `docker-compose.yaml` maka atribut **`environment` lebih diutamakan**.
+
+
+
+### `expose`
+
+Atribut `expose` digunakan untuk mendaftarkan port jaringan di dalam container
+agar dapat diakses oleh service lain di dalam jaringan Docker yang sama, tanpa
+mempublikasikannya (membukan port) ke mesin host (komputer pribadi).
+
+- Port yang didefinisikan di dalam `expose` hanya mendengarkan (*listen*) trafik
+  dari service lain yang terhubung dalam satu *network* internal Docker.
+- Port ini tidak bisa diakses oleh mesin luar atau pengguna luar yang mengakses
+  IP host fisik. Fungsinya mirip dengan instruksi `EXPOSE` di dalam
+  `Dockerfile`.
+
+
+#### Sintaks Penulisan
+
+Sintaks `expose` berupa `<portnum>/[<protocol>]` atau
+`<startport-endport>/[<protocol>]`.
+
+Contoh:
+
+```yaml
+services:
+  database:
+    image: postgres:latest
+    expose:
+      - "5432"
+
+```
+
+
+#### Perbedaan `expose` vs `port`
+
+Sering kali pemula tertukar antara kedua atribut ini. Berikut perbedaannya:
+
+| Fitur/Perilaku | Atribut `expose` | Atribut `ports` |
+| -------------- | -------------- | ------------- |
+| Akses dari Luar Host | Tidak bisa, Port tertutup bagi mesin luar/host | Bisa, Membuka dan memetakan port ke mesin host. |
+| Akses Antar-Container | Bisa, Dapat diakses oleh service lain dalam satu jaringan Docker. | Bisa, Otomatis dapat diakses juga oleh service lain. |
+| Format Nilai | Hanya port container (contoh: `"80"`). | Format pemetaan `HOST:CONTAINER` (contoh: `"8080:80`). |
+| Kasus Penggunaan Utama | Untuk service backend/database internal (seperti MySQL, Redis) yang tidak boleh diakses langsung oleh publik. | Untuk aplikasi web, frontend, atau API publik yang harus diakses langsung melalui browser atau client luar. |
+
+
+#### Contoh Penerapan
+
+Berikut adalah contoh sederhana konfigurasi `docker-compose.yaml` yang
+memperlihatkan bagaimana service database dilindungi menggunakan `expose`,
+sementara service web dapat diakses dari luar menggunakan ports.
+
+1. Langkah 1. Buat Direktori Proyek
+
+    ```bash
+    mkdir expose
+    cd expose
+    ```
+
+2. Langkah 2: Buat file `docker-compose.yaml`
+
+```yaml
+services:
+    database:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_PASSWORD: secretpassword
+            POSTGRES_DB: mydb
+        expose:
+            - "5432"
+
+    webapp:
+        image: nginx:alpine
+        ports:
+            - "8088:80"
+        depends_on:
+            - database
+```
+
+3. Langkah 3: Jalankan Docker Compose
+
+```bash
+docker compose up -d
+```
