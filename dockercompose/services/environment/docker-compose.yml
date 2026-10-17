@@ -1,0 +1,8 @@
+services:
+  demo-env:
+    image: alpine:latest
+    environment:
+      APLIKASI: "Belajar Docker Compose"
+      VERSI: "1.0.0"
+      PENULIS: "orsisam"
+    command: sh -c "echo Aplikasi: \$APLIKASI | Versi: \$VERSI | Dibuat oleh: \$PENULIS"
